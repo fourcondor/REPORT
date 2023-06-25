@@ -13,7 +13,7 @@
 
 ## API Server
 
-### List Pages(Front)
+### List Pages(Front) NON AUTENTICATA
 
 URL: `/api/pagesFrontOffice`
 
@@ -107,7 +107,7 @@ Request body: An object representing a page (Content-Type: `application/json`).
   ]  
 }
 ```
-Response: `201 OK` (success), `404 Not Found`. If the request does not come on an authenticated session, `422` error check the content of the page, `503` `Database error during the creation of Page
+Response: `201 OK` (success), `404` If the request does not come on an authenticated session, `422` error check the content of the page, `503` `Database error during the creation of Page
 
 Response body: The id of the newly created page, as a JSON value (Content-Type: `application/json`).
 
@@ -119,7 +119,7 @@ Method: POST
 Parameters: id of the page you want to edit.
 
 Description: Edit a page, this API does a delete of the page and create a new page,
-with another field "author" in the object if the user that is editing the page is an ADMIN.
+the "author" field in the object needs if the user who's editing the page is an ADMIN
 
 Request body: An object representing a page (Content-Type: `application/json`).
 ```
@@ -138,7 +138,7 @@ Request body: An object representing a page (Content-Type: `application/json`).
   "author": "Frodo"
 }
 ```
-Response: `201 OK` (success), `422 Not Found` the content of the page sent is wrong , `503` `Database error during the editing of Page`, or another user(ADMIN) has already changed the content of that page, so to be sure that a user wants to edit the page with the correct data, If the request does not come on an authenticated session, `401 Unauthorized`.
+Response: `201 OK` (success), `422 Not Found` the content of the page sent is wrong , `503` `Database error during the editing of Page`, or another user(ADMIN) has already changed the content of that page, so to be sure that a user wants to edit the page with the correct data this check is needed. If the request does not come on an authenticated session, `401 Unauthorized`.
 
 Response body: The id of the newly created page, as a JSON value (Content-Type: `application/json`).
 
@@ -149,14 +149,14 @@ Method: DELETE
 
 Parameter: id of the page you want to delete
 
-Description: Delete an existing Page, identified by its id. A cookie with a VALID SESSION ID must be provided. The user requesting the deletion of the page must be the same that owns the answer.
+Description: Delete an existing Page, identified by its id. A cookie with a VALID SESSION ID must be provided. The user requesting the deletion of the page must be the same that owns the page.
 
 Request body: _None_
 
 Response: `200 OK` (success) or `503 Service Unavailable` (generic error). If the request does not come on an authenticated session, `401 Unauthorized`.
 
 Response body: The number of the Row deleted, as a JSON value (Content-Type: `application/json`),
-=> {numRowCHangesPages, numRowChangesBlocks}.
+=> {numRowChangesPages, numRowChangesBlocks}.
 
 ### GET the site Name NON AUTENTICATA
 URL: `/api/siteName`
@@ -169,9 +169,14 @@ Description: Get the website's name from the server
 
 Request body: _None_
 
-Response: `200 No Content` (success), `404` (nameSite not found) `500 Service Unavailable` (generic error)
+Response: `200 OK` (success), `404` (nameSite not found) `500 Service Unavailable` (generic error)
 
-Response body: The name of the site.
+Response body: a JSON value (Content-Type: `application/json`),
+{
+  "id": 1,
+  "name": "Il Signore degli anelli"
+}
+
 
 ### PUT update the website's name AUTENTICATA
 URL: `/api/siteName/:id`
@@ -180,15 +185,33 @@ Method: PUT
 
 Parameter: the object's id from the website object
 
-Description: update the websits's name.
+Description: update the website's name.
 
-Request body: An object representing a page (Content-Type: `application/json`).
+Request body: An object representing the website name (Content-Type: `application/json`).
 {
   "id": 1,
-  "name": "Il Signore degli anelli"
+  "name": "Change name"
 }
 
 Response: `200 OK` (success), `422` (id not Found) `503 Database error during the update of the siteName` (Internal database error)
+
+Response body: number of changed rows.
+
+### GET the images from the server NON AUTENTICATA
+URL: `/api/images`
+
+Method: GET
+
+Parameter: _None_
+
+Description: Get the list of file names.
+
+Request body: _None_
+
+Response: `200 No Content` (success), `404` (nameSite not found) `500 Internal server error` (generic error)
+
+Responde body: A list of file names (Content-Type: `application/json`).
+["frodo.jpg", "sam.jpg", ...]
 
 ### __Create a new session (login)__
 
@@ -249,23 +272,27 @@ Response body: _None_
 
 ## Database Tables
 
-- Table `users` - contains xx yy zz
-- Table `something` - contains ww qq ss
-- ...
+- Table `users` - contains: id, name, email, salt, password, admin
+- Table `pages` - contains: id_page, title, id_user, data_creation, data_published
+- Table `blocks` - contains: id_block, type, description, code_page
+- Table `website` - contains: id, name
 
 ## Main React Components
-
-- `ListOfSomething` (in `List.js`): component purpose and main functionality
-- `GreatButton` (in `GreatButton.js`): component purpose and main functionality
-- ...
-
-(only _main_ components, minor ones may be skipped)
+- `App` (in ./App.jsx): obbiettivo caricamento delle Routes e gestione delle funzioni utilizzate per gestire il CMS, troviamo tra esse aggiunta pagina, editing della pagina, cancellazione pagina, e le hook fondamentali a gestire l'aggiornamento delle risorse tra cui pagine del front e back office, troviamo anche due useEffect dove una di esse presenta due dipendenze implementate con cura per evitare dei loop, principalmente si occupano di aggiornare le pages fornite dalle API.
+- `MainFrontOffice` (in `./components/PageComponents.jsx`): obbiettivo visuallizare la lista delle pagine pubblicate.
+- `MainBackOffcie` (in `./components/PageComponents.jsx`): obbiettivo visulizzare tutte le pagine,
+la pubblicazione si basa sulla data corrente che usa `current_Date = days()`, in base a quest'ultima le pagine risultano in `draft(INVALI DATE), programmate( > current_date), pubblicate ( <= current_date)`. Da qui si accede alla creazione modifica e cancellazione della pagina, e se si è admin anche poter cambiare il nome del sito.
+- `PageForm` (in `./components/PageForm.jsk`) obbiettivo aggiungere/modificare una pagina, al suo interno si compone di un componente chiamato "Contenitore" esso gestisce i blocchi di contenuti, se l'utente è anche ADMIN si occupa anche di cambiare l'autore della pagina sempre se quest'ultima esiste già.
+- `LoginForm` (in `./components/AuthComponents`) si occupa della parte del login form.
 
 ## Screenshot
 
-![Screenshot](./img/screenshot.jpg)
+![Screenshot](./Immagine.png)
 
 ## Users Credentials
 
-- username, password (plus any other requested info)
-- username, password (plus any other requested info)
+- username : "frodo@ring.it", password: "pwd", admin: false.
+- username : "gollum@ring.it", password: "pwd", admin: false.
+- username : "aragorn@ring.it", password: "pwd", admin: false.
+- username : "sauron@ring.it", password: "pwd", admin: true.
+
